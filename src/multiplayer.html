@@ -1,0 +1,159 @@
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+<!DOCTYPE html>
+<html>
+  <body>
+    <button id="add-video-url">add video list</button>
+    <button id="gen-video-json">generate</button>
+    <table class="video-info">
+      <tr>
+        <td>Video ID</td>
+        <td>start time</td>
+      </tr>
+      <tr class="video-info">
+        <td><input type="text" class="youtube-id" id="yid-0" value=""></td>
+        <td><input type="number" class="youtube-start-time" id="ystart-0" value="0" step="0.01" min="0"></td>
+      </tr>
+    </table>
+
+    <div>
+    <p>JSON data</p>
+    <p><textarea rows="10" cols="60" class="youtube-json" id="youtube-data-json"></textarea></p>
+    <p><button id="video-load">load JSON</button></p>
+    </div>
+
+    <div>
+    <button id="play">play</button>
+    <button id="pause">pause</button>
+    <button id="reset">reset</button>
+    </div>
+
+    <!-- 1. The <iframe> (and video player) will replace this <div> tag. -->
+    <table class="video-display" id="video-table">
+    </table>
+ 
+    <script>
+      // 2. This code loads the IFrame Player API code asynchronously.
+      var tag = document.createElement('script');
+ 
+      tag.src = "https://www.youtube.com/iframe_api";
+      var firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+ 
+      // 3. This function creates an <iframe> (and YouTube player)
+      //    after the API code downloads.
+
+      var ytPlayer = []
+      var ytState = []
+      var youtubeData = []
+
+      function onYouTubeIframeAPIReady() {
+        for (var i = 0; i < youtubeData.length; i++) {
+          //console.log(ytPlayer[i])
+          if (!ytPlayer[i]){
+              ytPlayer[i] = new YT.Player('video-'+i, {
+              height: '320',
+              width: '480',
+              videoId: youtubeData[i]["yid"],
+              playerVars: {
+                start: parseInt(youtubeData[i]["start"], 10), // 動画再生の開始位置
+              },
+              events: {
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange
+              }
+            });
+          }
+        }
+      }
+ 
+      // 4. The API will call this function when the video player is ready.
+      function onPlayerReady(event) {
+        event.target.setVolume(100);
+        event.target.playVideo();
+      }
+
+      function onPlayerStateChange(event) {
+        console.log(event.data)
+      }
+      
+      $(function() {
+        // add input field
+        $("#add-video-url").on("click", function(){
+          var size = $('li').length;
+          $("table.video-info").append('<tr class="video-info"><td><input type="text" class="youtube-id" id=yid-'+size+' value=""></td><td><input type="number" class="youtube-start-time" id="ystart-'+size+'" value="0" step="0.01" min="0"></td></tr>');
+        });
+
+        // gen data json
+        $("#gen-video-json").on("click", function(){
+          for (var i = 0; i < ytPlayer.length; i++) {
+            ytPlayer[i].destroy();
+          }
+          ytPlayer = []
+          ytState = []
+          youtubeData = []
+
+          $("table.video-info tr.video-info").each(function(i) {
+            var url = $(this).find(".youtube-id").val();
+            var start_time = $(this).find(".youtube-start-time").val();
+            console.log(start_time)
+            youtubeData[i] = {"yid": url, "start": start_time}
+          });
+          console.log(JSON.stringify(youtubeData));
+          $("#youtube-data-json").val(JSON.stringify(youtubeData));
+
+          // load
+          $("#video-load").trigger("click");
+        });
+
+        // load
+        $("#video-load").on("click", function(){
+          // Initialize
+          for (var i = 0; i < ytPlayer.length; i++) {
+            ytPlayer[i].destroy();
+          }
+          ytPlayer = []
+          ytState = []
+          youtubeData = []
+
+          // get data
+          console.log($("#youtube-data-json").val())
+          youtubeData = JSON.parse($("#youtube-data-json").val())
+          console.log(youtubeData);
+
+          // make video table
+          for(var i = 0; i < youtubeData.length/2; i++){
+            $("#video-table").append('<tr><td><div id="video-'+(2*i)+'"></td><td><div id="video-'+(2*i+1)+'"></td></tr>')
+          }
+
+          // create
+          onYouTubeIframeAPIReady();
+        });
+
+        // play
+        $('#play').click(function() {
+          for (var i = 0; i < ytPlayer.length; i++) {
+            ytPlayer[i].playVideo();
+          }
+        });
+
+        // pause
+        $('#pause').click(function() {
+          for (var i = 0; i < ytPlayer.length; i++) {
+            ytPlayer[i].pauseVideo();
+          }
+        });
+
+        // reset
+        $('#reset').click(function() {
+          for (var i = 0; i < ytPlayer.length; i++) {
+            console.log(youtubeData[i])
+            ytPlayer[i].seekTo(youtubeData[i]["start"], true);
+            ytPlayer[i].pauseVideo();
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>    
